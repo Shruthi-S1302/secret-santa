@@ -4,9 +4,9 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "npm run build",
-    "watch": "npm run build --watch --configuration development",
-    "test": "npm run test"
+    "build": "npx ng build",
+    "watch": "npx ng build --watch --configuration development",
+    "test": "npx ng test"
   },
   "prettier": {
     "printWidth": 100,
