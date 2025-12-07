@@ -1,0 +1,59 @@
+.container {
+  max-width: 900px;
+  margin: 20px auto;
+  font-family: Arial, sans-serif;
+}
+
+.card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.form-row {
+  display: flex;
+  gap: 8px;
+}
+
+.form-row input {
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #2b7a78;
+  color: white;
+  cursor: pointer;
+}
+
+button.big {
+  margin-top: 10px;
+  padding: 10px 16px;
+}
+
+button.danger {
+  background: #d9534f;
+}
+
+button.small {
+  padding: 4px 8px;
+}
+
+.people {
+  list-style: none;
+  padding: 0;
+}
+
+.people li {
+  padding: 8px 0;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dashed #ddd;
+}

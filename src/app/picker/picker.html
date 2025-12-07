@@ -1,0 +1,64 @@
+<div class="container">
+  <h1>Draw Your Secret Santa Match</h1>
+
+  <!-- Ask name FIRST -->
+  @if (!started) {
+    <div class="card">
+      <p>Enter your name to begin:</p>
+      <input [(ngModel)]="yourName" placeholder="Your name" />
+      <button (click)="start()" class="small">Start</button>
+    </div>
+  }
+
+  <!-- Only show the board AFTER user clicks Start -->
+  @if (started) {
+    <div>
+      @if (loading) {
+        <div class="card">
+          Loading...
+        </div>
+      }
+
+      <!-- Show message if user already has a receiver -->
+      @if (!loading && alreadyHasReceiver) {
+        <div class="card already-assigned">
+          <div class="message-icon">✓</div>
+          <h2>You've Already Picked!</h2>
+          <p class="assigned-name">Your chris child is: <strong>{{ assignedReceiverName }}</strong></p>
+          <p class="info-text">You can only pick one person. Your assignment has been saved!</p>
+        </div>
+      }
+
+      <!-- Show board only if not already assigned -->
+      @if (!loading && !alreadyHasReceiver) {
+        <div class="board card">
+          @for (c of chits; track c.name) {
+            <div
+              class="chit"
+              [style.left]="c.left"
+              [style.top]="c.top"
+              [style.transform]="'rotate(' + c.rot + ')'"
+              (click)="revealChit(c)"
+              [class.revealed]="c.revealed"
+            >
+              <!-- Front -->
+              @if (!c.revealed) {
+                <div class="chit-front">
+                  <div class="chit-label">?</div>
+                </div>
+              }
+
+              <!-- Back -->
+              @if (c.revealed) {
+                <div class="chit-back">
+                  <div class="child-title">You picked</div>
+                  <div class="child-name">{{ c.name }}🎉</div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
