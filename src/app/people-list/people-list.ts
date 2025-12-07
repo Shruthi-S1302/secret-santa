@@ -52,9 +52,52 @@ export class PeopleList {
   }
 
   removePerson(name: string) {
-    this.peopleService.removePersonByName(name).subscribe({
-      next: () => this.loadPeople(),
-      error: err => console.error('Failed to remove person:', err)
+    if (!confirm(`Are you sure you want to remove ${name}? Their assignments will also be deleted.`)) return;
+    
+    this.peopleService.removePersonAndAssignments(name).subscribe({
+      next: () => {
+        this.loadPeople();
+        alert(`${name} and their assignments have been removed.`);
+      },
+      error: err => {
+        console.error('Failed to remove person:', err);
+        alert('Error removing person. Please try again.');
+      }
+    });
+  }
+
+  deleteAllPeople() {
+    if (!confirm('⚠️ Are you sure you want to DELETE ALL PEOPLE? This cannot be undone!')) return;
+    
+    // Double confirmation for safety
+    if (!confirm('This will permanently delete all people AND all assignments. Are you absolutely sure?')) return;
+
+    this.peopleService.deleteAllPeopleAndAssignments().subscribe({
+      next: () => {
+        this.loadPeople();
+        alert('All people and assignments have been deleted.');
+      },
+      error: err => {
+        console.error('Failed to delete all people:', err);
+        alert('Error deleting people. Please try again.');
+      }
+    });
+  }
+
+  deleteAllAssignments() {
+    if (!confirm('⚠️ Are you sure you want to DELETE ALL ASSIGNMENTS? This cannot be undone!')) return;
+    
+    // Double confirmation for safety
+    if (!confirm('This will permanently delete all Secret Santa assignments. Are you absolutely sure?')) return;
+
+    this.peopleService.deleteAllAssignments().subscribe({
+      next: () => {
+        alert('All assignments have been deleted. People can now pick again.');
+      },
+      error: err => {
+        console.error('Failed to delete all assignments:', err);
+        alert('Error deleting assignments. Please try again.');
+      }
     });
   }
 

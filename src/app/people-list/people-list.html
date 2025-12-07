@@ -8,27 +8,48 @@
       <button (click)="addToStaged()">Add</button>
     </div>
 
-    <div *ngIf="stagedPeople.length > 0" class="card staged">
-      <h4>Pending (will be added in bulk)</h4>
-      <ul class="people">
-        <li *ngFor="let p of stagedPeople; let i = index">
-          {{ p }}
-          <button class="small" (click)="removeStaged(i)">Remove</button>
-        </li>
-      </ul>
+    @if (stagedPeople.length > 0) {
+      <div class="card staged">
+        <h4>Pending (will be added in bulk)</h4>
+        <ul class="people">
+          @for (p of stagedPeople; track $index) {
+            <li>
+              {{ p }}
+              <button class="small" (click)="removeStaged($index)">Remove</button>
+            </li>
+          }
+        </ul>
 
-      <button (click)="addPeople()">Add People</button>
-    </div>
+        <button (click)="addPeople()">Add People</button>
+      </div>
+    }
   </div>
 
   <div class="card">
-    <h3>Current People</h3>
+    <div class="header-with-action">
+      <h3>Current People</h3>
+      <button class="danger small" (click)="deleteAllPeople()">Delete All People</button>
+    </div>
     <ul class="people">
-      <li *ngFor="let p of people$ | async">
-        {{ p }}
-        <button class="danger small" (click)="removePerson(p)">Remove</button>
-      </li>
+      @for (p of people$ | async; track p) {
+        <li>
+          {{ p }}
+          <button class="danger small" (click)="removePerson(p)">Remove</button>
+        </li>
+      }
     </ul>
+  </div>
+
+  <!-- Danger Zone -->
+  <div class="card danger-zone">
+    <h3>⚠️ Danger Zone</h3>
+    <p class="warning-text">This action cannot be undone!</p>
+    
+    <div class="danger-actions">
+      <button class="danger" (click)="deleteAllAssignments()">
+        Delete All Assignments
+      </button>
+    </div>
   </div>
 
   <button class="big" (click)="goToPicker()">Go to Picker</button>

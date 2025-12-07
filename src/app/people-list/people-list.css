@@ -57,3 +57,52 @@ button.small {
   justify-content: space-between;
   border-bottom: 1px dashed #ddd;
 }
+
+/* Header with action button */
+.header-with-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header-with-action h3 {
+  margin: 0;
+}
+
+/* Danger Zone */
+.danger-zone {
+  background: #fff5f5;
+  border: 2px solid #fc8181;
+  margin-top: 30px;
+}
+
+.danger-zone h3 {
+  color: #c53030;
+  margin-bottom: 10px;
+}
+
+.warning-text {
+  color: #c53030;
+  font-weight: 600;
+  margin-bottom: 20px;
+  font-size: 0.95rem;
+}
+
+.danger-actions {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+
+.danger:active,
+button.danger:active {
+  transform: translateY(0);
+}
+
+button.small.danger {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
