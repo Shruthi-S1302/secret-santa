@@ -33,7 +33,6 @@ export class People {
     return from(Promise.all(promises).then(() => undefined));
   }
 
-  // Helper method to encrypt names (same as in picker component)
   private async encrypt(text: string): Promise<string> {
     const encoder = new TextEncoder();
     const data = encoder.encode(text);
@@ -77,7 +76,6 @@ export class People {
     return btoa(String.fromCharCode(...combined));
   }
 
-  // Helper method to decrypt names
   private async decrypt(encryptedText: string): Promise<string> {
     const encoder = new TextEncoder();
     
