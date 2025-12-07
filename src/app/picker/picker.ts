@@ -10,7 +10,7 @@ import {
   query,
   where
 } from '@angular/fire/firestore';
-import { environment } from '../../enviroment';
+import { environment } from '../../environment';
 
 interface Chit {
   name: string;

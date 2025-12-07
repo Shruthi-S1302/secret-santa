@@ -11,7 +11,7 @@ import {
 } from '@angular/fire/firestore';
 import { from, map, Observable, forkJoin, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
-import { environment } from '../../enviroment';
+import { environment } from '../../environment';
 
 @Injectable({
   providedIn: 'root'
