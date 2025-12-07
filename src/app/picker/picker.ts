@@ -20,6 +20,11 @@ interface Chit {
   revealed: boolean;
 }
 
+interface ChitPosition {
+  left: number;
+  top: number;
+}
+
 @Component({
   selector: 'app-picker',
   imports: [CommonModule, FormsModule],
@@ -43,6 +48,44 @@ export class Picker implements OnInit {
   private readonly ENCRYPTION_KEY = environment.ASSIGNMENTS_ENCRYPTION_KEY;
 
   ngOnInit() {}
+
+  // Check if two positions overlap
+  private isOverlapping(pos1: ChitPosition, pos2: ChitPosition, minDistance: number = 18): boolean {
+    const distance = Math.sqrt(
+      Math.pow(pos1.left - pos2.left, 2) + 
+      Math.pow(pos1.top - pos2.top, 2)
+    );
+    return distance < minDistance;
+  }
+
+  // Generate non-overlapping positions
+  private generatePositions(count: number): ChitPosition[] {
+    const positions: ChitPosition[] = [];
+    const maxAttempts = 100;
+
+    for (let i = 0; i < count; i++) {
+      let attempts = 0;
+      let validPosition = false;
+      let newPos: ChitPosition = { left: 0, top: 0 };
+
+      while (!validPosition && attempts < maxAttempts) {
+        newPos = {
+          left: 5 + Math.random() * 75,
+          top: 5 + Math.random() * 75
+        };
+
+        // Check if this position overlaps with any existing position
+        validPosition = positions.every(pos => !this.isOverlapping(newPos, pos));
+        attempts++;
+      }
+
+      // If we couldn't find a non-overlapping position after max attempts,
+      // use the last generated position anyway (rare case with many chits)
+      positions.push(newPos);
+    }
+
+    return positions;
+  }
 
   // Simple encryption using Web Crypto API
   private async encrypt(text: string): Promise<string> {
@@ -190,10 +233,13 @@ export class Picker implements OnInit {
           p => p !== this.yourName && !alreadyAssignedReceivers.includes(p)
         );
 
-        this.chits = filtered.map(name => ({
+        // Generate non-overlapping positions
+        const positions = this.generatePositions(filtered.length);
+
+        this.chits = filtered.map((name, index) => ({
           name,
-          left: `${5 + Math.random() * 80}%`,
-          top: `${5 + Math.random() * 80}%`,
+          left: `${positions[index].left}%`,
+          top: `${positions[index].top}%`,
           rot: `${-18 + Math.random() * 36}deg`,
           revealed: false
         }));
