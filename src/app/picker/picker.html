@@ -5,12 +5,13 @@
   @if (!started) {
     <div class="card">
       <p>Enter your name to begin:</p>
-      <input [(ngModel)]="yourName" placeholder="Your name" />
-      <button (click)="start()" class="small">Start</button>
+      <input [(ngModel)]="yourName" placeholder="Your name" (keyup.enter)="start()" />
+      <button (click)="start()" class="small" [disabled]="checkingExisting">
+        {{ checkingExisting ? 'Checking...' : 'Start' }}
+      </button>
     </div>
   }
 
-  <!-- Only show the board AFTER user clicks Start -->
   @if (started) {
     <div>
       @if (loading) {
@@ -24,7 +25,7 @@
         <div class="card already-assigned">
           <div class="message-icon">✓</div>
           <h2>You've Already Picked!</h2>
-          <p class="assigned-name">Your chris child is: <strong>{{ assignedReceiverName }}</strong></p>
+          <p class="assigned-name">Your Secret Santa child is: <strong>{{ assignedReceiverName }}</strong></p>
           <p class="info-text">You can only pick one person. Your assignment has been saved!</p>
         </div>
       }
@@ -35,6 +36,7 @@
           @for (c of chits; track c.name) {
             <div
               class="chit"
+              [class.disabled]="hasPickedOne && !c.revealed"
               [style.left]="c.left"
               [style.top]="c.top"
               [style.transform]="'rotate(' + c.rot + ')'"

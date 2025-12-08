@@ -116,24 +116,40 @@ export class People {
     return decoder.decode(decryptedData);
   }
 
-  // Delete assignments related to a specific person (as giver or receiver)
-  private async deleteAssignmentsForPerson(name: string): Promise<void> {
-    const encryptedName = await this.encrypt(name);
-    const assignmentsSnap = await getDocs(collection(this.firestore, 'assignments'));
+  // In people.ts service, add the hash method
+private async hash(text: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text + this.ENCRYPTION_KEY);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Update deleteAssignmentsForPerson
+private async deleteAssignmentsForPerson(name: string): Promise<void> {
+  const hashedName = await this.hash(name);
+  const assignmentsSnap = await getDocs(collection(this.firestore, 'assignments'));
+  
+  const deletePromises: Promise<void>[] = [];
+  
+  for (const docSnap of assignmentsSnap.docs) {
+    const data = docSnap.data();
     
-    const deletePromises: Promise<void>[] = [];
-    
-    for (const docSnap of assignmentsSnap.docs) {
-      const data = docSnap.data();
-      
-      // Check if this person is either the giver or receiver
-      if (data['giver'] === encryptedName || data['receiver'] === encryptedName) {
+    // Check if this person's hash matches
+    if (data['giverHash'] === hashedName) {
+      deletePromises.push(deleteDoc(doc(this.firestore, 'assignments', docSnap.id)));
+    } else {
+      // Also check receiver (need to decrypt)
+      const encryptedReceiver = data['receiver'];
+      const decryptedReceiver = await this.decrypt(encryptedReceiver);
+      if (decryptedReceiver === name) {
         deletePromises.push(deleteDoc(doc(this.firestore, 'assignments', docSnap.id)));
       }
     }
-    
-    await Promise.all(deletePromises);
   }
+  
+  await Promise.all(deletePromises);
+}
 
   removePersonAndAssignments(name: string): Observable<void> {
     return from(

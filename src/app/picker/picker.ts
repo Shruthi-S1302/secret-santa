@@ -40,16 +40,16 @@ export class Picker implements OnInit {
   loading = false;
   alreadyHasReceiver = false;
   assignedReceiverName = '';
+  hasPickedOne = false;
+  checkingExisting = false;
 
   private firestore = inject(Firestore);
   private ngZone = inject(NgZone);
   
-  // Encryption key - In production, store this securely (environment variable, secure config, etc.)
   private readonly ENCRYPTION_KEY = environment.ASSIGNMENTS_ENCRYPTION_KEY;
 
   ngOnInit() {}
 
-  // Check if two positions overlap
   private isOverlapping(pos1: ChitPosition, pos2: ChitPosition, minDistance: number = 18): boolean {
     const distance = Math.sqrt(
       Math.pow(pos1.left - pos2.left, 2) + 
@@ -58,7 +58,6 @@ export class Picker implements OnInit {
     return distance < minDistance;
   }
 
-  // Generate non-overlapping positions
   private generatePositions(count: number): ChitPosition[] {
     const positions: ChitPosition[] = [];
     const maxAttempts = 100;
@@ -74,25 +73,30 @@ export class Picker implements OnInit {
           top: 5 + Math.random() * 75
         };
 
-        // Check if this position overlaps with any existing position
         validPosition = positions.every(pos => !this.isOverlapping(newPos, pos));
         attempts++;
       }
 
-      // If we couldn't find a non-overlapping position after max attempts,
-      // use the last generated position anyway (rare case with many chits)
       positions.push(newPos);
     }
 
     return positions;
   }
 
-  // Simple encryption using Web Crypto API
+  // Hash function for queryable fields (produces consistent output)
+  private async hash(text: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text + this.ENCRYPTION_KEY); // Add salt from key
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // Encryption for sensitive data (produces different output each time)
   private async encrypt(text: string): Promise<string> {
     const encoder = new TextEncoder();
     const data = encoder.encode(text);
     
-    // Create a key from the encryption key string
     const keyMaterial = await crypto.subtle.importKey(
       'raw',
       encoder.encode(this.ENCRYPTION_KEY),
@@ -124,29 +128,23 @@ export class Picker implements OnInit {
       data
     );
     
-    // Combine salt + iv + encrypted data
     const combined = new Uint8Array(salt.length + iv.length + encryptedData.byteLength);
     combined.set(salt, 0);
     combined.set(iv, salt.length);
     combined.set(new Uint8Array(encryptedData), salt.length + iv.length);
     
-    // Convert to base64 for storage
     return btoa(String.fromCharCode(...combined));
   }
   
-  // Decryption function
   private async decrypt(encryptedText: string): Promise<string> {
     const encoder = new TextEncoder();
     
-    // Decode from base64
     const combined = Uint8Array.from(atob(encryptedText), c => c.charCodeAt(0));
     
-    // Extract salt, iv, and encrypted data
     const salt = combined.slice(0, 16);
     const iv = combined.slice(16, 28);
     const encryptedData = combined.slice(28);
     
-    // Create key from encryption key string
     const keyMaterial = await crypto.subtle.importKey(
       'raw',
       encoder.encode(this.ENCRYPTION_KEY),
@@ -178,39 +176,60 @@ export class Picker implements OnInit {
     return decoder.decode(decryptedData);
   }
 
-  start() {
+  async start() {
     if (!this.yourName.trim()) return;
-    this.started = true;
-    this.loadData();
-  }
-
-  async loadData() {
-    this.loading = true;
-
+    
+    // Reset all state
+    this.started = false;
+    this.alreadyHasReceiver = false;
+    this.assignedReceiverName = '';
+    this.hasPickedOne = false;
+    this.chits = [];
+    this.checkingExisting = true;
+    
     try {
-      // Encrypt the giver name for query
-      const encryptedGiver = await this.encrypt(this.yourName);
+      // Use HASH for querying (consistent output)
+      const hashedGiver = await this.hash(this.yourName);
       
-      // Check if this giver already has a receiver
       const giverQuery = query(
         collection(this.firestore, 'assignments'),
-        where('giver', '==', encryptedGiver)
+        where('giverHash', '==', hashedGiver)
       );
       const giverSnap = await getDocs(giverQuery);
       
       if (!giverSnap.empty) {
         // User already has an assignment - decrypt the receiver name
         const encryptedReceiver = giverSnap.docs[0].data()['receiver'];
-        const decryptedReceiver = await this.decrypt(encryptedReceiver);
+        const decryptedName = await this.decrypt(encryptedReceiver);
         
         this.ngZone.run(() => {
+          this.started = true;
           this.alreadyHasReceiver = true;
-          this.assignedReceiverName = decryptedReceiver;
-          this.loading = false;
+          this.assignedReceiverName = decryptedName;
+          this.checkingExisting = false;
         });
-        return;
+      } else {
+        // No existing assignment - proceed to load chits
+        this.ngZone.run(() => {
+          this.started = true;
+          this.checkingExisting = false;
+        });
+        await this.loadData();
       }
+    } catch (error) {
+      console.error('Error checking existing assignment:', error);
+      this.ngZone.run(() => {
+        this.checkingExisting = false;
+        this.started = true;
+      });
+      await this.loadData();
+    }
+  }
 
+  async loadData() {
+    this.loading = true;
+
+    try {
       // Get all people
       const peopleSnap = await getDocs(collection(this.firestore, 'people'));
       
@@ -256,25 +275,36 @@ export class Picker implements OnInit {
   }
 
   async revealChit(chit: Chit) {
-    if (chit.revealed) return;
+    if (chit.revealed || this.hasPickedOne) return;
     
     chit.revealed = true;
+    this.hasPickedOne = true;
 
     try {
-      // Encrypt both giver and receiver names before storing
+      // Hash giver for querying, encrypt both for storage
+      const hashedGiver = await this.hash(this.yourName);
       const encryptedGiver = await this.encrypt(this.yourName);
       const encryptedReceiver = await this.encrypt(chit.name);
       
       await addDoc(collection(this.firestore, 'assignments'), {
-        giver: encryptedGiver,
-        receiver: encryptedReceiver,
+        giverHash: hashedGiver,           // For querying
+        giver: encryptedGiver,             // For storage/display
+        receiver: encryptedReceiver,       // For storage/display
         revealedAt: Timestamp.now(),
         createdAt: Timestamp.now()
       });
 
-      console.log(`Assignment created (encrypted): ${this.yourName} -> ${chit.name}`);
+      console.log(`Assignment created: ${this.yourName} -> ${chit.name}`);
+      
+      this.ngZone.run(() => {
+        this.alreadyHasReceiver = true;
+        this.assignedReceiverName = chit.name;
+      });
+      
     } catch (error) {
       console.error('Error creating assignment:', error);
+      this.hasPickedOne = false;
+      chit.revealed = false;
     }
   }
 }
